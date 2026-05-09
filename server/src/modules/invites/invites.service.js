@@ -40,17 +40,14 @@ async function previewInvite(code) {
 }
 
 async function joinViaInvite(code, userId) {
+  const result = await invitesRepo.joinAtomically(code, userId);
+  if (result === 'not_found') throw createError(404, 'Invite not found');
+  if (result === 'expired')   throw createError(410, 'Invite expired');
+  if (result === 'exhausted') throw createError(410, 'Invite has reached its maximum uses');
+  if (result === 'already_member') throw createError(409, 'Already a member');
+
   const invite = await invitesRepo.findInviteByCode(code);
-  if (!invite) throw createError(404, 'Invite not found');
-  if (invite.expires_at && new Date(invite.expires_at) < new Date()) throw createError(410, 'Invite expired');
-  if (invite.max_uses && invite.use_count >= invite.max_uses) throw createError(410, 'Invite has reached its maximum uses');
-
-  const existing = await serversRepo.getMembership(userId, invite.server_id);
-  if (existing) throw createError(409, 'Already a member');
-
-  await serversRepo.addMember(userId, invite.server_id);
-  await invitesRepo.incrementUseCount(code);
-  return { serverId: invite.server_id, serverName: invite.server_name };
+  return { serverId: result.serverId, serverName: invite?.server_name };
 }
 
 module.exports = { createInvite, previewInvite, joinViaInvite };
