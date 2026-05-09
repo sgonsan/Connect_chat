@@ -28,7 +28,7 @@ services:
       - "7881:7881"
       - "7882:7882/udp"
     environment:
-      - LIVEKIT_KEYS=devkey:secret
+      - "LIVEKIT_KEYS=devkey: secret"
     depends_on:
       - postgres
 
