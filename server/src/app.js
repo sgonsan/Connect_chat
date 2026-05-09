@@ -9,6 +9,7 @@ const env = require('./config/env');
 
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
+const serversRoutes = require('./modules/servers/servers.routes');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/servers', serversRoutes);
 
 app.use(errorHandler);
 
