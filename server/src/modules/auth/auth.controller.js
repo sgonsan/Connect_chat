@@ -1,6 +1,7 @@
 // server/src/modules/auth/auth.controller.js
 const authService = require('./auth.service');
 const env = require('../../config/env');
+const { createError } = require('../../middleware/errorHandler');
 
 const COOKIE_NAME = 'refresh_token';
 const COOKIE_OPTS = {
@@ -29,7 +30,7 @@ async function login(req, res, next) {
 async function refresh(req, res, next) {
   try {
     const rawToken = req.cookies[COOKIE_NAME];
-    if (!rawToken) return res.status(401).json({ error: 'No refresh token' });
+    if (!rawToken) return next(createError(401, 'No refresh token'));
     const { accessToken } = await authService.refresh(rawToken);
     res.json({ accessToken });
   } catch (err) { next(err); }
@@ -39,7 +40,11 @@ async function logout(req, res, next) {
   try {
     const rawToken = req.cookies[COOKIE_NAME];
     if (rawToken) await authService.logout(rawToken);
-    res.clearCookie(COOKIE_NAME);
+    res.clearCookie(COOKIE_NAME, {
+      httpOnly: COOKIE_OPTS.httpOnly,
+      sameSite: COOKIE_OPTS.sameSite,
+      secure: COOKIE_OPTS.secure,
+    });
     res.status(204).send();
   } catch (err) { next(err); }
 }
