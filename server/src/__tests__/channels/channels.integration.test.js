@@ -55,3 +55,31 @@ describe('DELETE /api/channels/:id', () => {
     expect(res.status).toBe(204);
   });
 });
+
+describe('Channel Type Support', () => {
+  it('creating a channel without type defaults to text', async () => {
+    const res = await request(app)
+      .post(`/api/servers/${serverId}/channels`)
+      .set('Authorization', `Bearer ${tokenOwner}`)
+      .send({ name: 'no-type-channel' });
+    expect(res.status).toBe(201);
+    expect(res.body.type).toBe('text');
+  });
+
+  it('creating a channel with type voice returns type voice', async () => {
+    const res = await request(app)
+      .post(`/api/servers/${serverId}/channels`)
+      .set('Authorization', `Bearer ${tokenOwner}`)
+      .send({ name: 'voice-channel', type: 'voice' });
+    expect(res.status).toBe(201);
+    expect(res.body.type).toBe('voice');
+  });
+
+  it('creating a channel with an invalid type returns 400', async () => {
+    const res = await request(app)
+      .post(`/api/servers/${serverId}/channels`)
+      .set('Authorization', `Bearer ${tokenOwner}`)
+      .send({ name: 'bad-type-channel', type: 'invalid-type' });
+    expect(res.status).toBe(400);
+  });
+});
