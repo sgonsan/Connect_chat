@@ -1,32 +1,49 @@
+// client/src/pages/AppPage.jsx
 import React, { useState } from 'react';
-import ServerList from '../components/ServerList';
+import ServerList  from '../components/ServerList';
 import ChannelList from '../components/ChannelList';
-import ChatArea from '../components/ChatArea';
-import VoiceArea from '../components/VoiceArea';
+import ChatArea    from '../components/ChatArea';
+import VoiceArea   from '../components/VoiceArea';
+import MemberList  from '../components/MemberList';
+
 export default function AppPage() {
-  const [selectedServer, setSelectedServer] = useState(null);
-  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedServer,       setSelectedServer]       = useState(null);
+  const [selectedChannel,      setSelectedChannel]      = useState(null);
   const [selectedVoiceChannel, setSelectedVoiceChannel] = useState(null);
-  const handleSelectServer = (server) => { setSelectedServer(server); setSelectedChannel(null); setSelectedVoiceChannel(null); };
-  const handleSelectChannel = (channel) => { setSelectedChannel(channel); setSelectedVoiceChannel(null); };
-  const handleSelectVoiceChannel = (channel) => { setSelectedVoiceChannel(channel); setSelectedChannel(null); };
+  const [showMembers,          setShowMembers]          = useState(false);
+
+  const handleSelectServer = (server) => {
+    setSelectedServer(server);
+    setSelectedChannel(null);
+    setSelectedVoiceChannel(null);
+  };
+
   const activeSelectedId = selectedChannel?.id ?? selectedVoiceChannel?.id;
+
   return (
-    <div className="flex h-screen">
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-700)', overflow: 'hidden' }}>
       <ServerList onSelect={handleSelectServer} selectedId={selectedServer?.id} />
       <ChannelList
         server={selectedServer}
-        onSelect={handleSelectChannel}
-        onSelectVoiceChannel={handleSelectVoiceChannel}
+        onSelect={(ch) => { setSelectedChannel(ch); setSelectedVoiceChannel(null); }}
+        onSelectVoiceChannel={(ch) => { setSelectedVoiceChannel(ch); setSelectedChannel(null); }}
         selectedId={activeSelectedId}
+        onToggleMembers={() => setShowMembers(v => !v)}
       />
-      {selectedVoiceChannel ? (
-        <VoiceArea channel={selectedVoiceChannel} onLeave={() => setSelectedVoiceChannel(null)} />
-      ) : selectedChannel ? (
-        <ChatArea channel={selectedChannel} />
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-500">Select a channel to start</div>
-      )}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {selectedVoiceChannel ? (
+          <VoiceArea channel={selectedVoiceChannel} onLeave={() => setSelectedVoiceChannel(null)} />
+        ) : selectedChannel ? (
+          <ChatArea channel={selectedChannel} />
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            Selecciona un canal para comenzar
+          </div>
+        )}
+        {showMembers && selectedServer && (
+          <MemberList server={selectedServer} />
+        )}
+      </div>
     </div>
   );
 }
