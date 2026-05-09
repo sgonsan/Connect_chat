@@ -86,7 +86,8 @@ export default function ServerList({ onSelect, selectedId }) {
   const joinServer = async (e) => {
     e.preventDefault(); setError('');
     let code = inviteCode.trim();
-    if (code.startsWith('http')) code = code.split('/').pop();
+    if (code.startsWith('http')) code = code.split('/').filter(Boolean).pop() || '';
+    if (!code || !/^[a-zA-Z0-9_-]+$/.test(code)) { setError('Invalid invite code format'); return; }
 
     // Try new invite system first
     const inviteRes = await fetch(`/api/invites/${code}/join`, {
