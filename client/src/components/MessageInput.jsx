@@ -1,19 +1,29 @@
 // client/src/components/MessageInput.jsx
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
-export default function MessageInput({ onSend, channelName }) {
+export default function MessageInput({ onSend, channelName, onTypingStart, onTypingStop }) {
   const [value, setValue] = useState('');
+  const typingTimer = useRef(null);
+
+  const handleChange = (e) => {
+    setValue(e.target.value);
+    onTypingStart?.();
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => onTypingStop?.(), 3000);
+  };
 
   const submit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) return;
     onSend(trimmed);
     setValue('');
+    clearTimeout(typingTimer.current);
+    onTypingStop?.();
   };
 
   const onKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
   };
 
   return (
@@ -21,7 +31,7 @@ export default function MessageInput({ onSend, channelName }) {
       <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-600)', borderRadius: 8 }}>
         <textarea
           value={value}
-          onChange={e => setValue(e.target.value)}
+          onChange={handleChange}
           onKeyDown={onKeyDown}
           placeholder={`Message #${channelName}`}
           rows={1}

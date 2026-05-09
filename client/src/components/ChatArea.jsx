@@ -1,8 +1,21 @@
 // client/src/components/ChatArea.jsx
 import React, { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import MessageInput from './MessageInput';
+
+const mdComponents = {
+  p:    ({ children }) => <p style={{ margin: 0 }}>{children}</p>,
+  code: ({ children, className }) => {
+    const isBlock = className?.startsWith('language-');
+    return isBlock
+      ? <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 6, margin: '4px 0', overflow: 'auto' }}><code style={{ fontFamily: 'monospace', fontSize: 13 }}>{children}</code></pre>
+      : <code style={{ background: 'rgba(0,0,0,0.3)', padding: '0 4px', borderRadius: 3, fontFamily: 'monospace', fontSize: 13 }}>{children}</code>;
+  },
+  a:    ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>{children}</a>,
+};
 
 function groupMessages(messages) {
   const FIVE_MIN = 5 * 60 * 1000;
@@ -28,29 +41,64 @@ function formatTime(ts) {
 export default function ChatArea({ channel }) {
   const { token } = useAuth();
   const socketRef = useSocket();
-  const [messages, setMessages] = useState([]);
-  const [hoverId,  setHoverId]  = useState(null);
-  const bottomRef = useRef(null);
+  const [messages,    setMessages]    = useState([]);
+  const [hoverId,     setHoverId]     = useState(null);
+  const [editingId,   setEditingId]   = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [typingUsers, setTypingUsers] = useState({});
+  const bottomRef  = useRef(null);
+  const typingTimers = useRef({});
 
   const myUserId = (() => {
     try { return JSON.parse(atob(token.split('.')[1])).userId; } catch { return null; }
   })();
 
   useEffect(() => {
-    if (!channel) { setMessages([]); return; }
+    if (!channel) { setMessages([]); setTypingUsers({}); return; }
+
     fetch(`/api/channels/${channel.id}/messages`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(setMessages);
+
+    // Mark as read
+    fetch(`/api/channels/${channel.id}/read`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+
     const socket = socketRef?.current;
     if (!socket) return;
     socket.emit('channel:join', { channelId: channel.id });
+
     const onMsg     = (msg) => setMessages(prev => [...prev, msg]);
     const onDeleted = ({ messageId }) => setMessages(prev => prev.filter(m => m.id !== messageId));
+    const onEdited  = ({ id, content, editedAt }) =>
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, content, edited_at: editedAt } : m));
+    const onTyping  = ({ channelId: ch, userId, isTyping }) => {
+      if (ch !== channel?.id || userId === myUserId) return;
+      setTypingUsers(prev => {
+        const next = { ...prev };
+        clearTimeout(typingTimers.current[userId]);
+        if (isTyping) {
+          next[userId] = true;
+          typingTimers.current[userId] = setTimeout(() => {
+            setTypingUsers(p => { const n = { ...p }; delete n[userId]; return n; });
+          }, 5000);
+        } else {
+          delete next[userId];
+        }
+        return next;
+      });
+    };
+
     socket.on('message:new',     onMsg);
     socket.on('message:deleted', onDeleted);
+    socket.on('message:edited',  onEdited);
+    socket.on('typing:update',   onTyping);
+
     return () => {
       socket.emit('channel:leave', { channelId: channel.id });
       socket.off('message:new',     onMsg);
       socket.off('message:deleted', onDeleted);
+      socket.off('message:edited',  onEdited);
+      socket.off('typing:update',   onTyping);
+      Object.values(typingTimers.current).forEach(clearTimeout);
     };
   }, [channel?.id]);
 
@@ -58,6 +106,16 @@ export default function ChatArea({ channel }) {
 
   const deleteMessage = (id) => socketRef?.current?.emit('message:delete', { messageId: id });
   const sendMessage   = (content) => socketRef?.current?.emit('message:send', { channelId: channel.id, content });
+
+  const startEdit = (msg) => { setEditingId(msg.id); setEditContent(msg.content); };
+  const submitEdit = (msgId) => {
+    const trimmed = editContent.trim();
+    if (!trimmed) return;
+    socketRef?.current?.emit('message:edit', { messageId: msgId, content: trimmed });
+    setEditingId(null);
+  };
+
+  const typingCount = Object.keys(typingUsers).length;
 
   if (!channel) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -108,14 +166,45 @@ export default function ChatArea({ channel }) {
                       background: hoverId === msg.id ? 'rgba(0,0,0,0.08)' : 'transparent',
                     }}
                   >
-                    <p style={{ margin: 0, fontSize: 15, color: 'var(--text-primary)', wordBreak: 'break-word', paddingRight: hoverId === msg.id ? 80 : 0 }}>
-                      {msg.content}
-                    </p>
-                    {hoverId === msg.id && (
+                    {editingId === msg.id ? (
+                      <div>
+                        <textarea
+                          value={editContent}
+                          onChange={e => setEditContent(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitEdit(msg.id); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          autoFocus
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            background: 'var(--bg-500)', border: '1px solid var(--accent)',
+                            borderRadius: 4, color: 'var(--text-primary)', padding: '4px 8px',
+                            fontSize: 15, fontFamily: 'inherit', resize: 'none',
+                          }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Enter to save · Escape to cancel</span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 15, color: 'var(--text-primary)', wordBreak: 'break-word', paddingRight: hoverId === msg.id ? 88 : 0 }}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                          {msg.content}
+                        </ReactMarkdown>
+                        {msg.edited_at && (
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>(edited)</span>
+                        )}
+                      </div>
+                    )}
+
+                    {hoverId === msg.id && editingId !== msg.id && (
                       <div style={{ position: 'absolute', right: 4, top: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                          {new Date(msg.created_at).toLocaleString()}
-                        </span>
+                        {msg.user?.id === myUserId && (
+                          <button
+                            onClick={() => startEdit(msg)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '0 4px' }}
+                            title="Edit"
+                          >✏️</button>
+                        )}
                         {msg.user?.id === myUserId && (
                           <button
                             onClick={() => deleteMessage(msg.id)}
@@ -134,7 +223,19 @@ export default function ChatArea({ channel }) {
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput onSend={sendMessage} channelName={channel.name} />
+      {/* Typing indicator */}
+      {typingCount > 0 && (
+        <div style={{ padding: '0 16px 4px', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', flexShrink: 0 }}>
+          {typingCount === 1 ? 'Someone is typing…' : `${typingCount} people are typing…`}
+        </div>
+      )}
+
+      <MessageInput
+        onSend={sendMessage}
+        channelName={channel.name}
+        onTypingStart={() => socketRef?.current?.emit('typing:start', { channelId: channel.id })}
+        onTypingStop={()  => socketRef?.current?.emit('typing:stop',  { channelId: channel.id })}
+      />
     </div>
   );
 }
