@@ -62,6 +62,14 @@ describe('POST /api/servers/join', () => {
   });
 });
 
+describe('DELETE /api/servers/:id', () => {
+  it('returns 403 when non-owner tries to delete', async () => {
+    const res = await request(app).delete(`/api/servers/${serverId}`)
+      .set('Authorization', `Bearer ${tokenBob}`);
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('DELETE /api/servers/:id/leave', () => {
   it('lets bob leave the server', async () => {
     const res = await request(app).delete(`/api/servers/${serverId}/leave`)
