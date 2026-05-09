@@ -10,4 +10,8 @@ const joinServerSchema = z.object({
   invite_code: z.string().uuid(),
 });
 
-module.exports = { createServerSchema, joinServerSchema };
+const updateMemberRoleSchema = z.object({
+  role: z.enum(['moderator', 'member']),
+});
+
+module.exports = { createServerSchema, joinServerSchema, updateMemberRoleSchema };

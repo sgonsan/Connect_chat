@@ -42,4 +42,27 @@ async function leaveServer(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { createServer, getMyServers, getServerDetail, deleteServer, joinServer, leaveServer };
+async function getMembers(req, res, next) {
+  try {
+    const members = await serversService.getMembers(req.params.id, req.user.userId);
+    res.json(members);
+  } catch (err) { next(err); }
+}
+
+async function updateMemberRole(req, res, next) {
+  try {
+    const updated = await serversService.updateMemberRole(
+      req.params.id, req.params.userId, req.body.role
+    );
+    res.json(updated);
+  } catch (err) { next(err); }
+}
+
+async function kickMember(req, res, next) {
+  try {
+    await serversService.kickMember(req.params.id, req.params.userId, req.user.userId);
+    res.status(204).send();
+  } catch (err) { next(err); }
+}
+
+module.exports = { createServer, getMyServers, getServerDetail, deleteServer, joinServer, leaveServer, getMembers, updateMemberRole, kickMember };

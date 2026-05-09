@@ -45,4 +45,29 @@ async function leaveServer(serverId, userId) {
   await serversRepo.removeMember(userId, serverId);
 }
 
-module.exports = { createServer, getMyServers, getServerDetail, deleteServer, joinServer, leaveServer };
+async function getMembers(serverId, userId) {
+  const membership = await serversRepo.getMembership(userId, serverId);
+  if (!membership) throw createError(403, 'Not a member of this server');
+  return serversRepo.getMembersByServer(serverId);
+}
+
+async function updateMemberRole(serverId, targetUserId, newRole) {
+  const target = await serversRepo.getMembership(targetUserId, serverId);
+  if (!target) throw createError(404, 'Member not found');
+  if (target.role === 'owner') throw createError(400, 'Cannot change the owner\'s role');
+  if (!['moderator', 'member'].includes(newRole)) throw createError(400, 'Invalid role');
+  return serversRepo.updateMemberRole(targetUserId, serverId, newRole);
+}
+
+async function kickMember(serverId, targetUserId, requesterId) {
+  const target = await serversRepo.getMembership(targetUserId, serverId);
+  if (!target) throw createError(404, 'Member not found');
+  if (target.role === 'owner') throw createError(400, 'Cannot kick the server owner');
+  const requester = await serversRepo.getMembership(requesterId, serverId);
+  if (!requester) throw createError(403, 'Not a member');
+  if (requester.role === 'member') throw createError(403, 'Insufficient permissions');
+  if (requester.role === 'moderator' && target.role === 'moderator') throw createError(403, 'Moderators cannot kick other moderators');
+  await serversRepo.removeMember(targetUserId, serverId);
+}
+
+module.exports = { createServer, getMyServers, getServerDetail, deleteServer, joinServer, leaveServer, getMembers, updateMemberRole, kickMember };

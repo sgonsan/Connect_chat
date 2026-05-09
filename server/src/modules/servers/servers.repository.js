@@ -94,8 +94,34 @@ async function getServerWithChannels(serverId) {
   return { ...server, channels: channelsRes.rows };
 }
 
+async function getMembersByServer(serverId) {
+  const { rows } = await pool.query(
+    `SELECT sm.user_id AS id, sm.role, sm.joined_at,
+            u.username, u.avatar_url
+     FROM server_members sm
+     JOIN users u ON u.id = sm.user_id
+     WHERE sm.server_id = $1
+     ORDER BY
+       CASE sm.role WHEN 'owner' THEN 0 WHEN 'moderator' THEN 1 ELSE 2 END,
+       u.username ASC`,
+    [serverId]
+  );
+  return rows;
+}
+
+async function updateMemberRole(userId, serverId, role) {
+  const { rows } = await pool.query(
+    `UPDATE server_members SET role = $1
+     WHERE user_id = $2 AND server_id = $3
+     RETURNING user_id AS id, role, joined_at`,
+    [role, userId, serverId]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   createServer, findServersByUser, findServerById,
   findServerByInviteCode, deleteServer, addMember,
   removeMember, getMembership, getServerWithChannels,
+  getMembersByServer, updateMemberRole,
 };
