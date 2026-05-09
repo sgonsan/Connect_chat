@@ -41,5 +41,6 @@ describe('authenticate middleware', () => {
     authenticate(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
   });
 });
