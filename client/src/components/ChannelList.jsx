@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import InviteModal from './InviteModal';
 
-function ChannelItem({ channel, active, onClick }) {
+function ChannelItem({ channel, active, onClick, unreadCount }) {
   const [hover, setHover] = useState(false);
   const isVoice = channel.type === 'voice';
   return (
@@ -17,16 +17,26 @@ function ChannelItem({ channel, active, onClick }) {
         width: '100%', padding: '6px 8px', border: 'none', cursor: 'pointer',
         borderRadius: 4, textAlign: 'left', fontSize: 15,
         background: active ? 'var(--bg-500)' : hover ? 'var(--bg-600)' : 'transparent',
-        color: active || hover ? 'var(--text-primary)' : 'var(--text-muted)',
+        color: active || hover || unreadCount > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
         transition: 'background 0.1s, color 0.1s',
+        fontWeight: unreadCount > 0 && !active ? 600 : 400,
       }}
     >
       <span style={{ opacity: 0.7, fontSize: 16, width: 20, textAlign: 'center', flexShrink: 0 }}>
         {isVoice ? '🔊' : '#'}
       </span>
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {channel.name}
       </span>
+      {unreadCount > 0 && !active && (
+        <span style={{
+          background: 'var(--danger)', color: '#fff', borderRadius: 10,
+          fontSize: 11, fontWeight: 700, padding: '1px 5px', minWidth: 18,
+          textAlign: 'center', flexShrink: 0,
+        }}>
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
     </button>
   );
 }
@@ -70,6 +80,7 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
   const [headerMenu, setHeaderMenu] = useState(false);
   const [newName,    setNewName]    = useState('');
   const [newType,    setNewType]    = useState('text');
+  const [unread,     setUnread]     = useState({});
 
   const fetchData = () => {
     if (!server) { setChannels([]); setMyRole('member'); return; }
@@ -109,6 +120,26 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
       socket.off('server:channel_deleted', onDeleted);
     };
   }, [server?.id, socketRef?.current]);
+
+  // Fetch unread counts when server changes
+  useEffect(() => {
+    if (!server) { setUnread({}); return; }
+    fetch(`/api/servers/${server.id}/unread`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(setUnread).catch(() => {});
+  }, [server?.id]);
+
+  // Increment unread count when a new message arrives in a channel the user is not viewing
+  useEffect(() => {
+    const socket = socketRef?.current;
+    if (!socket) return;
+    const onMsg = (msg) => {
+      if (msg.channel_id && msg.channel_id !== selectedId) {
+        setUnread(prev => ({ ...prev, [msg.channel_id]: (prev[msg.channel_id] || 0) + 1 }));
+      }
+    };
+    socket.on('message:new', onMsg);
+    return () => socket.off('message:new', onMsg);
+  }, [selectedId]);
 
   const canManage = ['owner', 'moderator'].includes(myRole);
 
@@ -190,13 +221,20 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
         <SectionHeader label="Text Channels" canAdd={canManage}
           onAdd={() => { setNewType('text'); setShowCreate(true); }} />
         {textChannels.map(c => (
-          <ChannelItem key={c.id} channel={c} active={selectedId === c.id} onClick={() => onSelect(c)} />
+          <ChannelItem key={c.id} channel={c} active={selectedId === c.id}
+            unreadCount={unread[c.id] || 0}
+            onClick={() => {
+              setUnread(prev => ({ ...prev, [c.id]: 0 }));
+              fetch(`/api/channels/${c.id}/read`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+              onSelect(c);
+            }} />
         ))}
 
         <SectionHeader label="Voice Channels" canAdd={canManage}
           onAdd={() => { setNewType('voice'); setShowCreate(true); }} />
         {voiceChannels.map(c => (
           <ChannelItem key={c.id} channel={c} active={selectedId === c.id}
+            unreadCount={0}
             onClick={() => onSelectVoiceChannel?.(c)} />
         ))}
       </div>
