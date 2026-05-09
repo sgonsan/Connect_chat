@@ -3,11 +3,11 @@ const channelsRepo = require('./channels.repository');
 const serversRepo = require('../servers/servers.repository');
 const { createError } = require('../../middleware/errorHandler');
 
-async function createChannel(serverId, name, userId) {
+async function createChannel(serverId, name, userId, type = 'text') {
   const server = await serversRepo.findServerById(serverId);
   if (!server) throw createError(404, 'Server not found');
   if (server.owner_id !== userId) throw createError(403, 'Only the owner can create channels');
-  return channelsRepo.createChannel(serverId, name);
+  return channelsRepo.createChannel(serverId, name, type);
 }
 
 async function deleteChannel(channelId, userId) {

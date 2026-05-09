@@ -3,7 +3,8 @@ const channelsService = require('./channels.service');
 
 async function createChannel(req, res, next) {
   try {
-    const channel = await channelsService.createChannel(req.params.id, req.body.name, req.user.userId);
+    const { name, type } = req.body;
+    const channel = await channelsService.createChannel(req.params.id, name, req.user.userId, type);
     res.status(201).json(channel);
   } catch (err) { next(err); }
 }
