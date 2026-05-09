@@ -45,6 +45,7 @@ describe('POST /api/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user).not.toHaveProperty('password_hash');
   });
 
   it('returns 401 on wrong password', async () => {
@@ -84,6 +85,13 @@ describe('POST /api/auth/logout', () => {
     const res = await request(app)
       .post('/api/auth/logout')
       .set('Cookie', cookie);
+
+    expect(res.status).toBe(204);
+  });
+
+  it('returns 204 even without refresh cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout');
 
     expect(res.status).toBe(204);
   });

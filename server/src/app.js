@@ -13,8 +13,8 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: env.ALLOWED_ORIGIN, credentials: true }));
-app.use(express.json());
 app.use(cookieParser());
+app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 
