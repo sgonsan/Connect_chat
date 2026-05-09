@@ -1,0 +1,38 @@
+// server/src/socket/handlers/message.handler.js
+const messagesService = require('../../modules/messages/messages.service');
+
+function registerMessageHandlers(io, socket) {
+  socket.on('message:send', async ({ channelId, content }) => {
+    try {
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return socket.emit('error', { code: 'VALIDATION', message: 'Content is required' });
+      }
+      if (content.length > 2000) {
+        return socket.emit('error', { code: 'VALIDATION', message: 'Message too long' });
+      }
+
+      const message = await messagesService.createMessage({
+        channelId,
+        userId: socket.user.userId,
+        content: content.trim(),
+      });
+
+      io.to(`channel:${channelId}`).emit('message:new', message);
+    } catch (err) {
+      const code = err.status === 403 ? 'FORBIDDEN' : 'INTERNAL';
+      socket.emit('error', { code, message: err.message });
+    }
+  });
+
+  socket.on('message:delete', async ({ messageId }) => {
+    try {
+      const { channelId } = await messagesService.deleteMessage(messageId, socket.user.userId);
+      io.to(`channel:${channelId}`).emit('message:deleted', { messageId, channelId });
+    } catch (err) {
+      const code = err.status === 403 ? 'FORBIDDEN' : err.status === 404 ? 'NOT_FOUND' : 'INTERNAL';
+      socket.emit('error', { code, message: err.message });
+    }
+  });
+}
+
+module.exports = { registerMessageHandlers };
