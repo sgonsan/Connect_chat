@@ -16,12 +16,12 @@ Añadir canales de voz/video a la aplicación. Los usuarios pueden unirse a un c
 
 ## 2. Stack adicional
 
-| Componente | Tecnología |
-|---|---|
-| SFU (media server) | LiveKit (Docker container) |
-| Backend SDK | `livekit-server-sdk` (Node.js) |
-| Frontend SDK | `@livekit/components-react` + `livekit-client` |
-| Señalización | LiveKit WebSocket interno (no Socket.IO) |
+| Componente         | Tecnología                                     |
+| ------------------ | ---------------------------------------------- |
+| SFU (media server) | LiveKit (Docker container)                     |
+| Backend SDK        | `livekit-server-sdk` (Node.js)                 |
+| Frontend SDK       | `@livekit/components-react` + `livekit-client` |
+| Señalización       | LiveKit WebSocket interno (no Socket.IO)       |
 
 LiveKit se agrega al `docker-compose.yml` existente. El backend genera tokens de acceso LiveKit usando el SDK oficial. El frontend se conecta directamente a LiveKit para toda la comunicación de medios.
 
@@ -46,7 +46,7 @@ No hay nuevas tablas. LiveKit gestiona el estado de las salas en memoria (sin pe
 
 ## 4. Arquitectura
 
-```
+```text
 Cliente React
   ├── HTTP/REST  ──► Node.js → token LiveKit (POST /api/voice/token)
   └── WebRTC     ──► LiveKit SFU (:7880) — audio/video directo
@@ -73,9 +73,9 @@ Node.js Backend
 
 ### Autenticado — miembro del servidor
 
-| Método | Ruta | Body | Respuesta |
-|---|---|---|---|
-| POST | `/api/voice/token` | `{ channelId }` | `{ token, livekitUrl }` |
+| Método | Ruta               | Body            | Respuesta               |
+| ------ | ------------------ | --------------- | ----------------------- |
+| POST   | `/api/voice/token` | `{ channelId }` | `{ token, livekitUrl }` |
 
 El token LiveKit tiene TTL corto (1 hora). El endpoint verifica que el canal exista, sea de tipo `voice`, y que el usuario sea miembro del servidor al que pertenece el canal.
 
@@ -84,24 +84,34 @@ El token LiveKit tiene TTL corto (1 hora). El endpoint verifica que el canal exi
 ## 6. Cambios al backend existente
 
 ### `channels.schema.js`
+
 Agregar `type` al schema de creación:
+
 ```js
 const createChannelSchema = z.object({
-  name: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
-  type: z.enum(['text', 'voice']).default('text'),
+  name: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/),
+  type: z.enum(["text", "voice"]).default("text"),
 });
 ```
 
 ### `channels.repository.js`
+
 Pasar `type` al INSERT de `createChannel`.
 
 ### Nuevo módulo: `server/src/modules/voice/`
+
 - `voice.controller.js` — genera token LiveKit
 - `voice.routes.js` — POST `/api/voice/token`, requiere `authenticate`
 - Montado en `app.js` como `/api/voice`
 
 ### `docker-compose.yml`
+
 Agregar servicio LiveKit:
+
 ```yaml
 livekit:
   image: livekit/livekit-server:latest
@@ -115,7 +125,8 @@ livekit:
 ```
 
 ### Variables de entorno (`.env`)
-```
+
+```bash
 LIVEKIT_URL=ws://localhost:7880
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
@@ -126,23 +137,27 @@ LIVEKIT_API_SECRET=secret
 ## 7. Cambios al frontend existente
 
 ### `ChannelList.jsx`
+
 - Mostrar canales de texto (#) y voz (🔊) en secciones separadas
 - Al crear canal, elegir tipo texto o voz
 - Al hacer clic en canal de voz → llamar a `onSelectVoice(channel)` en lugar de `onSelect`
 
 ### `AppPage.jsx`
+
 - Nuevo estado: `selectedVoiceChannel`
 - Si `selectedVoiceChannel` está activo → renderizar `<VoiceArea>` en lugar de `<ChatArea>`
 
 ### Nuevos componentes
 
 **`client/src/components/VoiceArea.jsx`**
+
 - Fetch token `POST /api/voice/token`
 - Conectar con `LiveKitRoom` del SDK
 - Grid de participantes con `VideoTrack` / avatar fallback
 - Barra de controles: mute mic, toggle cámara, colgar
 
 **`client/src/components/ParticipantTile.jsx`**
+
 - Tile individual: video si cámara activa, avatar (inicial) si no
 - Nombre del participante superpuesto abajo
 
@@ -150,7 +165,7 @@ LIVEKIT_API_SECRET=secret
 
 ## 8. Estructura de archivos nueva
 
-```
+```text
 server/src/
 ├── db/migrations/
 │   └── 002_add_channel_type.sql
@@ -167,8 +182,8 @@ client/src/components/
 
 ## 9. Roadmap de fases
 
-| Fase | Contenido |
-|---|---|
-| **1 (completa)** | Auth, servidores, canales de texto, mensajería, Socket.IO |
+| Fase              | Contenido                                                 |
+| ----------------- | --------------------------------------------------------- |
+| **1 (completa)**  | Auth, servidores, canales de texto, mensajería, Socket.IO |
 | **2 (este spec)** | Canales de voz/video con LiveKit, grilla de participantes |
-| **3** | Compartir pantalla + encapsulado Electron |
+| **3**             | Compartir pantalla + encapsulado Electron                 |
