@@ -13,6 +13,7 @@ const usersRoutes   = require('./modules/users/users.routes');
 const serversRoutes = require('./modules/servers/servers.routes');
 const { serversRouter: channelServersRouter, channelsRouter } = require('./modules/channels/channels.routes');
 const { channelsRouter: messagesChannelsRouter, messagesRouter } = require('./modules/messages/messages.routes');
+const voiceRoutes = require('./modules/voice/voice.routes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/servers/:id/channels',  channelServersRouter);
 app.use('/api/channels',              channelsRouter);
 app.use('/api/channels/:id/messages', messagesChannelsRouter);
 app.use('/api/messages',              messagesRouter);
+app.use('/api/voice',                 voiceRoutes);
 
 app.use(errorHandler);
 
