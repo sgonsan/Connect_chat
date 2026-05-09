@@ -2,6 +2,8 @@
 
 git pull
 
-cd client && npm run build && cd .. 
+cd server && npm install && cd ..
+
+cd client && npm install && npm run build && cd .. 
 
 pm2 restart all
