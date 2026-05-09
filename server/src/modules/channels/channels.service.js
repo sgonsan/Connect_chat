@@ -3,13 +3,13 @@ const channelsRepo = require('./channels.repository');
 const serversRepo = require('../servers/servers.repository');
 const { createError } = require('../../middleware/errorHandler');
 
-async function createChannel(serverId, name, userId, type = 'text') {
+async function createChannel(serverId, name, userId, type = 'text', category = null) {
   const server = await serversRepo.findServerById(serverId);
   if (!server) throw createError(404, 'Server not found');
   const membership = await serversRepo.getMembership(userId, serverId);
   if (!membership) throw createError(403, 'Not a member of this server');
   if (!['owner', 'moderator'].includes(membership.role)) throw createError(403, 'Only owner or moderator can create channels');
-  return channelsRepo.createChannel(serverId, name, type);
+  return channelsRepo.createChannel(serverId, name, type, category);
 }
 
 async function deleteChannel(channelId, userId) {

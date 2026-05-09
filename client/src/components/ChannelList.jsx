@@ -64,6 +64,22 @@ function SectionHeader({ label, canAdd, onAdd }) {
   );
 }
 
+function groupByCategory(channels) {
+  const groups = {};
+  for (const ch of channels) {
+    const key = ch.category || '';
+    if (!groups[key]) groups[key] = { label: ch.category || null, channels: [] };
+    groups[key].channels.push(ch);
+  }
+  // Sort: null/empty category first, then alphabetical
+  return Object.values(groups).sort((a, b) => {
+    if (!a.label && !b.label) return 0;
+    if (!a.label) return -1;
+    if (!b.label) return 1;
+    return a.label.localeCompare(b.label);
+  });
+}
+
 const menuItemStyle = {
   display: 'block', width: '100%', background: 'none', border: 'none',
   color: 'var(--text-primary)', fontSize: 14, padding: '6px 8px',
@@ -73,14 +89,20 @@ const menuItemStyle = {
 export default function ChannelList({ server, onSelect, onSelectVoiceChannel, selectedId, onToggleMembers, onChannelDeleted }) {
   const { token } = useAuth();
   const socketRef = useSocket();
-  const [channels,   setChannels]   = useState([]);
-  const [myRole,     setMyRole]     = useState('member');
-  const [showCreate, setShowCreate] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
-  const [headerMenu, setHeaderMenu] = useState(false);
-  const [newName,    setNewName]    = useState('');
-  const [newType,    setNewType]    = useState('text');
-  const [unread,     setUnread]     = useState({});
+  const [channels,      setChannels]      = useState([]);
+  const [myRole,        setMyRole]        = useState('member');
+  const [showCreate,    setShowCreate]    = useState(false);
+  const [showInvite,    setShowInvite]    = useState(false);
+  const [headerMenu,    setHeaderMenu]    = useState(false);
+  const [newName,       setNewName]       = useState('');
+  const [newType,       setNewType]       = useState('text');
+  const [newCategory,   setNewCategory]   = useState('');
+  const [unread,        setUnread]        = useState({});
+  const [collapsedCats, setCollapsedCats] = useState(new Set());
+
+  const toggleCat = (key) => setCollapsedCats(prev => {
+    const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s;
+  });
 
   const fetchData = () => {
     if (!server) { setChannels([]); setMyRole('member'); return; }
@@ -149,9 +171,9 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
     await fetch(`/api/servers/${server.id}/channels`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: newName.toLowerCase().replace(/\s+/g, '-'), type: newType }),
+      body: JSON.stringify({ name: newName.toLowerCase().replace(/\s+/g, '-'), type: newType, category: newCategory || null }),
     });
-    setNewName(''); setNewType('text'); setShowCreate(false);
+    setNewName(''); setNewType('text'); setNewCategory(''); setShowCreate(false);
   };
 
   const leaveServer = async () => {
@@ -159,9 +181,6 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
     await fetch(`/api/servers/${server.id}/leave`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     window.location.reload();
   };
-
-  const textChannels  = channels.filter(c => !c.type || c.type === 'text');
-  const voiceChannels = channels.filter(c => c.type === 'voice');
 
   if (!server) return (
     <div style={{ width: 240, minWidth: 240, background: 'var(--bg-800)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
@@ -219,25 +238,65 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
 
       {/* Channel list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 16px' }}>
-        <SectionHeader label="Text Channels" canAdd={canManage}
-          onAdd={() => { setNewType('text'); setShowCreate(true); }} />
-        {textChannels.map(c => (
-          <ChannelItem key={c.id} channel={c} active={selectedId === c.id}
-            unreadCount={unread[c.id] || 0}
-            onClick={() => {
-              setUnread(prev => ({ ...prev, [c.id]: 0 }));
-              fetch(`/api/channels/${c.id}/read`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-              onSelect(c);
-            }} />
-        ))}
-
-        <SectionHeader label="Voice Channels" canAdd={canManage}
-          onAdd={() => { setNewType('voice'); setShowCreate(true); }} />
-        {voiceChannels.map(c => (
-          <ChannelItem key={c.id} channel={c} active={selectedId === c.id}
-            unreadCount={0}
-            onClick={() => onSelectVoiceChannel?.(c)} />
-        ))}
+        {groupByCategory(channels).map(group => {
+          const catKey = group.label || '__default__';
+          const isCollapsed = collapsedCats.has(catKey);
+          const textChs  = group.channels.filter(c => !c.type || c.type === 'text');
+          const voiceChs = group.channels.filter(c => c.type === 'voice');
+          return (
+            <div key={catKey}>
+              {group.label && (
+                <button
+                  onClick={() => toggleCat(catKey)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    width: '100%', background: 'none', border: 'none',
+                    padding: '16px 4px 4px', cursor: 'pointer',
+                    color: 'var(--text-muted)', fontSize: 11, fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                  }}
+                >
+                  <span style={{ fontSize: 10 }}>{isCollapsed ? '▶' : '▼'}</span>
+                  {group.label}
+                </button>
+              )}
+              {!isCollapsed && (
+                <>
+                  {textChs.length > 0 && (
+                    <>
+                      {!group.label && (
+                        <SectionHeader label="Text Channels" canAdd={canManage}
+                          onAdd={() => { setNewType('text'); setNewCategory(''); setShowCreate(true); }} />
+                      )}
+                      {textChs.map(c => (
+                        <ChannelItem key={c.id} channel={c} active={selectedId === c.id}
+                          unreadCount={unread[c.id] || 0}
+                          onClick={() => {
+                            setUnread(prev => ({ ...prev, [c.id]: 0 }));
+                            fetch(`/api/channels/${c.id}/read`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+                            onSelect(c);
+                          }} />
+                      ))}
+                    </>
+                  )}
+                  {voiceChs.length > 0 && (
+                    <>
+                      {!group.label && (
+                        <SectionHeader label="Voice Channels" canAdd={canManage}
+                          onAdd={() => { setNewType('voice'); setNewCategory(''); setShowCreate(true); }} />
+                      )}
+                      {voiceChs.map(c => (
+                        <ChannelItem key={c.id} channel={c} active={selectedId === c.id}
+                          unreadCount={0}
+                          onClick={() => onSelectVoiceChannel?.(c)} />
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Create channel modal */}
@@ -261,6 +320,13 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
                   </div>
                 </div>
                 <div>
+                  <label className="field-label">Category <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+                  <input className="field-input"
+                    placeholder="e.g. GENERAL"
+                    value={newCategory}
+                    onChange={e => setNewCategory(e.target.value.toUpperCase())} />
+                </div>
+                <div>
                   <label className="field-label">Channel name</label>
                   <input className="field-input"
                     placeholder={newType === 'text' ? 'general' : 'voice-chat'}
@@ -268,7 +334,7 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button type="button" className="btn btn-ghost" onClick={() => { setNewCategory(''); setShowCreate(false); }}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Create Channel</button>
               </div>
             </form>
