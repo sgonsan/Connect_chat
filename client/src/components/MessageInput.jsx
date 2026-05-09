@@ -1,23 +1,48 @@
+// client/src/components/MessageInput.jsx
 import React, { useState } from 'react';
+
 export default function MessageInput({ onSend, channelName }) {
-  const [content, setContent] = useState('');
-  const handleSubmit = (e) => {
+  const [value, setValue] = useState('');
+
+  const submit = (e) => {
     e.preventDefault();
-    const trimmed = content.trim();
+    const trimmed = value.trim();
     if (!trimmed) return;
     onSend(trimmed);
-    setContent('');
+    setValue('');
   };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e); }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="p-4 flex gap-2">
-      <input
-        className="flex-1 bg-gray-600 rounded px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        placeholder={`Message #${channelName}`}
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        maxLength={2000}
-      />
-      <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded font-semibold">Send</button>
-    </form>
+    <div style={{ padding: '0 16px 16px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-600)', borderRadius: 8 }}>
+        <textarea
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={`Message #${channelName}`}
+          rows={1}
+          style={{
+            flex: 1, background: 'none', border: 'none', outline: 'none',
+            color: 'var(--text-primary)', fontSize: 15, padding: '12px 16px',
+            resize: 'none', fontFamily: 'inherit', lineHeight: 1.375,
+          }}
+        />
+        <button
+          onClick={submit}
+          disabled={!value.trim()}
+          style={{
+            background: 'none', border: 'none', padding: '0 16px',
+            cursor: value.trim() ? 'pointer' : 'default',
+            color: value.trim() ? 'var(--accent)' : 'var(--text-muted)',
+            fontSize: 20, transition: 'color 0.15s', flexShrink: 0,
+          }}
+          title="Send"
+        >➤</button>
+      </div>
+    </div>
   );
 }

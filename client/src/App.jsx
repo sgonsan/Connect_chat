@@ -2,9 +2,10 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import AppPage from './pages/AppPage';
+import Login      from './pages/Login';
+import Register   from './pages/Register';
+import AppPage    from './pages/AppPage';
+import InvitePage from './pages/InvitePage';
 
 function PrivateRoute({ children }) {
   const { token } = useAuth();
@@ -20,9 +21,10 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/app"      element={
+        <Route path="/login"        element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register"     element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/invite/:code" element={<InvitePage />} />
+        <Route path="/app"          element={
           <PrivateRoute>
             <SocketProvider>
               <AppPage />
