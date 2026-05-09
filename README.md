@@ -4,13 +4,13 @@ A Discord-inspired real-time chat application with text channels, voice/video ro
 
 ## Stack
 
-| Layer | Tech |
-|---|---|
-| Frontend | React 18 + Vite + CSS custom properties |
-| Backend | Node.js + Express + Socket.IO |
-| Database | PostgreSQL 16 |
-| Voice/Video | LiveKit SFU (Docker) |
-| Auth | JWT (Bearer token) |
+| Layer       | Tech                                    |
+| ----------- | --------------------------------------- |
+| Frontend    | React 18 + Vite + CSS custom properties |
+| Backend     | Node.js + Express + Socket.IO           |
+| Database    | PostgreSQL 16                           |
+| Voice/Video | LiveKit SFU (Docker)                    |
+| Auth        | JWT (Bearer token)                      |
 
 ---
 
@@ -78,27 +78,30 @@ cd server && npm start
 ## Features
 
 ### Servers & Channels
+
 - Create or join servers
 - Text channels (real-time via Socket.IO) and voice channels (WebRTC via LiveKit)
 - Messages grouped by author within 5-minute windows
 
 ### Roles & Permissions
 
-| Action | Member | Moderator | Owner |
-|---|:---:|:---:|:---:|
-| Send messages | ✓ | ✓ | ✓ |
-| Create/delete channels | | ✓ | ✓ |
-| Delete any message | | ✓ | ✓ |
-| Kick members | | ✓ | ✓ |
-| Generate invite links | | ✓ | ✓ |
-| Promote/demote roles | | | ✓ |
+| Action                 | Member | Moderator | Owner |
+| ---------------------- | :----: | :-------: | :---: |
+| Send messages          |   ✓    |     ✓     |   ✓   |
+| Create/delete channels |        |     ✓     |   ✓   |
+| Delete any message     |        |     ✓     |   ✓   |
+| Kick members           |        |     ✓     |   ✓   |
+| Generate invite links  |        |     ✓     |   ✓   |
+| Promote/demote roles   |        |           |   ✓   |
 
 ### Invite Links
+
 - Generate links with optional expiry (1h / 12h / 24h / 7d / never) and max-use limit
 - Public preview page at `/invite/:code` — shows server info before joining
 - Atomic join transaction prevents race conditions on limited-use invites
 
 ### Voice & Video
+
 - Click any voice channel to join — camera and microphone are requested
 - Video grid with participant tiles
 - Controls: mute, toggle camera, leave room
@@ -110,7 +113,7 @@ cd server && npm start
 
 ## Project Structure
 
-```
+```filetree
 Connect_chat/
 ├── docker-compose.yml
 ├── server/
