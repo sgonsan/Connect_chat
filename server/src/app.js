@@ -22,6 +22,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/servers', serversRoutes);
 
+const { serversRouter: channelServersRouter, channelsRouter } = require('./modules/channels/channels.routes');
+app.use('/api/servers/:id/channels', channelServersRouter);
+app.use('/api/channels', channelsRouter);
+
 app.use(errorHandler);
 
 module.exports = app;
