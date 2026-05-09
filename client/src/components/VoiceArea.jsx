@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -76,21 +75,23 @@ export default function VoiceArea({ channel, onLeave }) {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axios.post(
-        '/api/voice/token',
-        { channelId: channel.id },
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
+      const res = await fetch('/api/voice/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ channelId: channel.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Failed to connect to voice channel');
+      }
       setLivekitToken(data.token);
       setLivekitUrl(data.livekitUrl);
       setJoined(true);
     } catch (err) {
-      const msg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to connect to voice channel';
-      setError(msg);
+      setError(err.message || 'Failed to connect to voice channel');
     } finally {
       setLoading(false);
     }
