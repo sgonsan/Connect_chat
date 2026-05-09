@@ -27,7 +27,11 @@ export default function AppPage() {
   };
 
   const handleToggleDM = () => {
-    setDmMode(v => !v);
+    setDmMode(v => {
+      const nv = !v;
+      if (nv) setSelectedServer(null);
+      return nv;
+    });
     setSelectedConversation(null);
     setSelectedChannel(null);
     setSelectedVoiceChannel(null);
@@ -48,6 +52,7 @@ export default function AppPage() {
     const conv = convs.find(c => c.id === conversationId);
     if (conv) {
       setDmMode(true);
+      setSelectedServer(null);
       setSelectedConversation(conv);
       setSelectedChannel(null);
       setSelectedVoiceChannel(null);
@@ -66,10 +71,10 @@ export default function AppPage() {
       />
       {dmMode ? (
         <DMList
-          selectedId={selectedConversation?.id}
-          onSelect={setSelectedConversation}
-          refreshSignal={dmRefresh}
-        />
+            selectedId={selectedConversation?.id}
+            onSelect={(conv) => { setSelectedServer(null); setDmMode(true); setSelectedConversation(conv); }}
+            refreshSignal={dmRefresh}
+          />
       ) : (
         <ChannelList
           server={selectedServer}
