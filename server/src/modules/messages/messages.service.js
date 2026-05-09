@@ -42,4 +42,15 @@ async function editMessage(messageId, userId, content) {
   return messagesRepo.editMessage(messageId, content);
 }
 
-module.exports = { getMessages, createMessage, editMessage, deleteMessage };
+async function toggleReaction(messageId, userId, emoji) {
+  const message = await messagesRepo.findMessageById(messageId);
+  if (!message) throw createError(404, 'Message not found');
+  const serverId = await messagesRepo.getChannelServerId(message.channel_id);
+  const membership = await serversRepo.getMembership(userId, serverId);
+  if (!membership) throw createError(403, 'Not a member');
+  await messagesRepo.toggleReaction(messageId, userId, emoji);
+  const reactions = await messagesRepo.getReactions(messageId);
+  return { messageId, channelId: message.channel_id, reactions };
+}
+
+module.exports = { getMessages, createMessage, editMessage, deleteMessage, toggleReaction };

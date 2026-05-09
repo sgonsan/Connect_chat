@@ -2,6 +2,8 @@
 const messagesService = require('./messages.service');
 const { getMessagesSchema } = require('./messages.schema');
 
+const VALID_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','🎉','👀'];
+
 
 async function getMessages(req, res, next) {
   try {
@@ -25,4 +27,13 @@ async function editMessage(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getMessages, editMessage, deleteMessage };
+async function toggleReaction(req, res, next) {
+  try {
+    if (!VALID_EMOJIS.includes(req.params.emoji))
+      return res.status(400).json({ error: 'Invalid emoji' });
+    const result = await messagesService.toggleReaction(req.params.id, req.user.userId, req.params.emoji);
+    res.json(result);
+  } catch (err) { next(err); }
+}
+
+module.exports = { getMessages, editMessage, deleteMessage, toggleReaction };

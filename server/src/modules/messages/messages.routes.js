@@ -13,5 +13,6 @@ const messagesRouter = Router();
 messagesRouter.use(authenticate);
 messagesRouter.patch('/:id', validate(editMessageSchema), ctrl.editMessage);
 messagesRouter.delete('/:id', ctrl.deleteMessage);
+messagesRouter.post('/:id/reactions/:emoji', ctrl.toggleReaction);
 
 module.exports = { channelsRouter, messagesRouter };

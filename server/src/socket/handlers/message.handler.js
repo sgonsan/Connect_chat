@@ -1,6 +1,8 @@
 // server/src/socket/handlers/message.handler.js
 const messagesService = require('../../modules/messages/messages.service');
 
+const VALID_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','🎉','👀'];
+
 function registerMessageHandlers(io, socket) {
   socket.on('message:send', async ({ channelId, content }) => {
     try {
@@ -47,6 +49,20 @@ function registerMessageHandlers(io, socket) {
     } catch (err) {
       const code = err.status === 403 ? 'FORBIDDEN' : err.status === 404 ? 'NOT_FOUND' : 'INTERNAL';
       socket.emit('error', { code, message: err.message });
+    }
+  });
+
+  socket.on('message:react', async ({ messageId, emoji }) => {
+    try {
+      if (!VALID_EMOJIS.includes(emoji))
+        return socket.emit('error', { code: 'VALIDATION', message: 'Invalid emoji' });
+      const result = await messagesService.toggleReaction(messageId, socket.user.userId, emoji);
+      io.to(`channel:${result.channelId}`).emit('message:reacted', {
+        messageId: result.messageId,
+        reactions: result.reactions,
+      });
+    } catch (err) {
+      socket.emit('error', { code: err.status === 403 ? 'FORBIDDEN' : 'INTERNAL', message: err.message });
     }
   });
 }
