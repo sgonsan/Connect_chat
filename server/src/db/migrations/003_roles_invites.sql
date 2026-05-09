@@ -1,7 +1,7 @@
 -- server/src/db/migrations/003_roles_invites.sql
 
 -- 1. Ampliar el CHECK constraint de server_members para incluir 'moderator'
-ALTER TABLE server_members DROP CONSTRAINT role_check;
+ALTER TABLE server_members DROP CONSTRAINT IF EXISTS role_check;
 ALTER TABLE server_members ADD CONSTRAINT role_check
   CHECK (role IN ('owner', 'moderator', 'member'));
 
