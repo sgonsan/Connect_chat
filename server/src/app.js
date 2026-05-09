@@ -16,6 +16,7 @@ const { serversRouter: channelServersRouter, channelsRouter } = require('./modul
 const { channelsRouter: messagesChannelsRouter, messagesRouter } = require('./modules/messages/messages.routes');
 const voiceRoutes = require('./modules/voice/voice.routes');
 const { serversInvitesRouter, invitesRouter } = require('./modules/invites/invites.routes');
+const conversationsRouter = require('./modules/conversations/conversations.routes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/messages',              messagesRouter);
 app.use('/api/voice',                 voiceRoutes);
 app.use('/api/servers/:id/invites', serversInvitesRouter);
 app.use('/api/invites',             invitesRouter);
+app.use('/api/conversations',       conversationsRouter);
 
 const distPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(distPath));

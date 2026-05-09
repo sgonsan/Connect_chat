@@ -1,5 +1,6 @@
 // server/src/socket/handlers/message.handler.js
 const messagesService = require('../../modules/messages/messages.service');
+const convsService = require('../../modules/conversations/conversations.service');
 
 const VALID_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','🎉','👀'];
 
@@ -61,6 +62,31 @@ function registerMessageHandlers(io, socket) {
         messageId: result.messageId,
         reactions: result.reactions,
       });
+    } catch (err) {
+      socket.emit('error', { code: err.status === 403 ? 'FORBIDDEN' : 'INTERNAL', message: err.message });
+    }
+  });
+
+  socket.on('dm:join', async ({ conversationId }) => {
+    try {
+      const member = await convsService.getMessages(conversationId, socket.user.userId, { limit: 1 })
+        .then(() => true).catch(() => false);
+      if (!member) return socket.emit('error', { code: 'FORBIDDEN', message: 'Not a member' });
+      socket.join(`dm:${conversationId}`);
+    } catch {
+      socket.emit('error', { code: 'INTERNAL', message: 'Server error' });
+    }
+  });
+
+  socket.on('dm:leave', ({ conversationId }) => {
+    socket.leave(`dm:${conversationId}`);
+  });
+
+  socket.on('dm:send', async ({ conversationId, content }) => {
+    try {
+      if (!content?.trim()) return socket.emit('error', { code: 'VALIDATION', message: 'Content required' });
+      const message = await convsService.send(conversationId, socket.user.userId, content.trim());
+      io.to(`dm:${conversationId}`).emit('dm:new', message);
     } catch (err) {
       socket.emit('error', { code: err.status === 403 ? 'FORBIDDEN' : 'INTERNAL', message: err.message });
     }
