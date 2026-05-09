@@ -3,6 +3,20 @@ const serversRepo = require('../../modules/servers/servers.repository');
 const channelsRepo = require('../../modules/channels/channels.repository');
 
 function registerChannelHandlers(io, socket) {
+  socket.on('server:join', async ({ serverId }) => {
+    try {
+      const membership = await serversRepo.getMembership(socket.user.userId, serverId);
+      if (!membership) return socket.emit('error', { code: 'FORBIDDEN', message: 'Not a member of this server' });
+      socket.join(`server:${serverId}`);
+    } catch {
+      socket.emit('error', { code: 'INTERNAL', message: 'Server error' });
+    }
+  });
+
+  socket.on('server:leave', ({ serverId }) => {
+    socket.leave(`server:${serverId}`);
+  });
+
   socket.on('channel:join', async ({ channelId }) => {
     try {
       const channel = await channelsRepo.findChannelById(channelId);
@@ -12,7 +26,7 @@ function registerChannelHandlers(io, socket) {
       if (!membership) return socket.emit('error', { code: 'FORBIDDEN', message: 'Not a member of this server' });
 
       socket.join(`channel:${channelId}`);
-    } catch (err) {
+    } catch {
       socket.emit('error', { code: 'INTERNAL', message: 'Server error' });
     }
   });

@@ -29,6 +29,10 @@ export default function AppPage() {
         onSelectVoiceChannel={(ch) => { setSelectedVoiceChannel(ch); setSelectedChannel(null); }}
         selectedId={activeSelectedId}
         onToggleMembers={() => setShowMembers(v => !v)}
+        onChannelDeleted={(channelId) => {
+          if (selectedChannel?.id === channelId) setSelectedChannel(null);
+          if (selectedVoiceChannel?.id === channelId) setSelectedVoiceChannel(null);
+        }}
       />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {selectedVoiceChannel ? (

@@ -15,6 +15,7 @@ const io = new Server(httpServer, {
   },
 });
 
+app.locals.io = io;
 setupGateway(io);
 
 httpServer.listen(env.PORT, () => {

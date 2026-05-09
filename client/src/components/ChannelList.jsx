@@ -1,6 +1,7 @@
 // client/src/components/ChannelList.jsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import InviteModal from './InviteModal';
 
 function ChannelItem({ channel, active, onClick }) {
@@ -59,8 +60,9 @@ const menuItemStyle = {
   textAlign: 'left', cursor: 'pointer', borderRadius: 4,
 };
 
-export default function ChannelList({ server, onSelect, onSelectVoiceChannel, selectedId, onToggleMembers }) {
+export default function ChannelList({ server, onSelect, onSelectVoiceChannel, selectedId, onToggleMembers, onChannelDeleted }) {
   const { token } = useAuth();
+  const socketRef = useSocket();
   const [channels,   setChannels]   = useState([]);
   const [myRole,     setMyRole]     = useState('member');
   const [showCreate, setShowCreate] = useState(false);
@@ -85,6 +87,29 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
 
   useEffect(() => { fetchData(); }, [server?.id]);
 
+  // Join server socket room and listen for real-time channel changes
+  useEffect(() => {
+    const socket = socketRef?.current;
+    if (!socket || !server) return;
+
+    socket.emit('server:join', { serverId: server.id });
+
+    const onCreated = (channel) => setChannels(prev => [...prev, channel]);
+    const onDeleted = ({ channelId }) => {
+      setChannels(prev => prev.filter(c => c.id !== channelId));
+      onChannelDeleted?.(channelId);
+    };
+
+    socket.on('server:channel_created', onCreated);
+    socket.on('server:channel_deleted', onDeleted);
+
+    return () => {
+      socket.emit('server:leave', { serverId: server.id });
+      socket.off('server:channel_created', onCreated);
+      socket.off('server:channel_deleted', onDeleted);
+    };
+  }, [server?.id, socketRef?.current]);
+
   const canManage = ['owner', 'moderator'].includes(myRole);
 
   const createChannel = async (e) => {
@@ -94,7 +119,7 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ name: newName.toLowerCase().replace(/\s+/g, '-'), type: newType }),
     });
-    setNewName(''); setNewType('text'); setShowCreate(false); fetchData();
+    setNewName(''); setNewType('text'); setShowCreate(false);
   };
 
   const leaveServer = async () => {

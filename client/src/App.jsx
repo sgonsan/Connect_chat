@@ -8,12 +8,14 @@ import AppPage    from './pages/AppPage';
 import InvitePage from './pages/InvitePage';
 
 function PrivateRoute({ children }) {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
+  if (isLoading) return null;
   return token ? children : <Navigate to="/login" replace />;
 }
 
 function PublicRoute({ children }) {
-  const { token } = useAuth();
+  const { token, isLoading } = useAuth();
+  if (isLoading) return null;
   return token ? <Navigate to="/app" replace /> : children;
 }
 

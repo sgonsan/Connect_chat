@@ -19,6 +19,7 @@ async function deleteChannel(channelId, userId) {
   if (!membership) throw createError(403, 'Not a member of this server');
   if (!['owner', 'moderator'].includes(membership.role)) throw createError(403, 'Only owner or moderator can delete channels');
   await channelsRepo.deleteChannel(channelId);
+  return { serverId: channel.server_id };
 }
 
 module.exports = { createChannel, deleteChannel };
