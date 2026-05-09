@@ -2,6 +2,7 @@
 const { verifyAccessToken } = require('../config/jwt');
 const { registerChannelHandlers } = require('./handlers/channel.handler');
 const { registerMessageHandlers } = require('./handlers/message.handler');
+const { registerPresenceHandlers } = require('./handlers/presence.handler');
 
 function setupGateway(io) {
   io.use((socket, next) => {
@@ -20,6 +21,7 @@ function setupGateway(io) {
 
     registerChannelHandlers(io, socket);
     registerMessageHandlers(io, socket);
+    registerPresenceHandlers(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
