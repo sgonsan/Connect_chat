@@ -17,4 +17,7 @@ module.exports = {
   JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL || '15m',
   JWT_REFRESH_TTL_DAYS: parseInt(process.env.JWT_REFRESH_TTL_DAYS || '7', 10),
   ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+  LIVEKIT_URL: process.env.LIVEKIT_URL || 'ws://localhost:7880',
+  LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY || 'devkey',
+  LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET || 'secret',
 };

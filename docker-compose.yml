@@ -19,5 +19,18 @@ services:
     ports:
       - "5433:5432"
 
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: connect-chat-livekit
+    command: --dev
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    environment:
+      - LIVEKIT_KEYS=devkey:secret
+    depends_on:
+      - postgres
+
 volumes:
   pgdata:
