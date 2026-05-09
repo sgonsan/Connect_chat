@@ -22,7 +22,7 @@ export default function DMList({ selectedId, onSelect, refreshSignal }) {
     const onDmNew = () => fetchConvs();
     socket.on('dm:new', onDmNew);
     return () => socket.off('dm:new', onDmNew);
-  }, [socketRef?.current, fetchConvs]);
+  }, [socketRef, fetchConvs]);
 
   return (
     <div style={{ width: 240, minWidth: 240, background: 'var(--bg-800)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

@@ -53,7 +53,7 @@ export default function DMArea({ conversation, onNewMessage }) {
       socket.emit('dm:leave', { conversationId: conversation.id });
       socket.off('dm:new', onMsg);
     };
-  }, [conversation?.id]);
+  }, [conversation?.id, socketRef?.current]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
