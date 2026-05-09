@@ -8,6 +8,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const env = require('./config/env');
 
 const authRoutes = require('./modules/auth/auth.routes');
+const usersRoutes = require('./modules/users/users.routes');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
 
 app.use(errorHandler);
 
