@@ -1,8 +1,9 @@
 // client/src/components/MemberList.jsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
-function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh }) {
+function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh, isOnline }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isMe     = member.id === myUserId;
   const canManage = myRole === 'owner' && !isMe && member.role !== 'owner';
@@ -33,8 +34,16 @@ function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh }) {
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; setMenuOpen(false); }}
       onClick={() => { if (canManage) setMenuOpen(v => !v); }}
     >
-      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-        {member.username[0].toUpperCase()}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
+          {member.username[0].toUpperCase()}
+        </div>
+        <div style={{
+          position: 'absolute', bottom: 0, right: 0,
+          width: 10, height: 10, borderRadius: '50%',
+          background: isOnline ? 'var(--success)' : 'var(--bg-500)',
+          border: '2px solid var(--bg-800)',
+        }} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
@@ -68,7 +77,9 @@ const ctxItemStyle = {
 
 export default function MemberList({ server }) {
   const { token } = useAuth();
+  const socketRef = useSocket();
   const [members, setMembers] = useState([]);
+  const [onlineIds, setOnlineIds] = useState(new Set());
 
   const myUserId = (() => {
     try { return JSON.parse(atob(token.split('.')[1])).userId; } catch { return null; }
@@ -83,6 +94,26 @@ export default function MemberList({ server }) {
   };
 
   useEffect(() => { fetchMembers(); }, [server?.id]);
+
+  // Listen for presence updates from server
+  useEffect(() => {
+    const socket = socketRef?.current;
+    if (!socket || !server) return;
+
+    const onList    = ({ onlineUserIds }) => setOnlineIds(new Set(onlineUserIds));
+    const onOnline  = ({ userId }) => setOnlineIds(prev => new Set([...prev, userId]));
+    const onOffline = ({ userId }) => setOnlineIds(prev => { const s = new Set(prev); s.delete(userId); return s; });
+
+    socket.on('presence:list',    onList);
+    socket.on('presence:online',  onOnline);
+    socket.on('presence:offline', onOffline);
+
+    return () => {
+      socket.off('presence:list',    onList);
+      socket.off('presence:online',  onOnline);
+      socket.off('presence:offline', onOffline);
+    };
+  }, [server?.id, socketRef?.current]);
 
   const byRole = { owner: [], moderator: [], member: [] };
   members.forEach(m => (byRole[m.role] || (byRole[m.role] = [])).push(m));
@@ -106,7 +137,7 @@ export default function MemberList({ server }) {
           <div style={{ padding: '0 4px' }}>
             {byRole[key].map(m => (
               <MemberRow key={m.id} member={m} myRole={myRole} myUserId={myUserId}
-                serverId={server.id} token={token} onRefresh={fetchMembers} />
+                serverId={server.id} token={token} onRefresh={fetchMembers} isOnline={onlineIds.has(m.id)} />
             ))}
           </div>
         </div>

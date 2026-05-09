@@ -104,6 +104,7 @@ export default function ChannelList({ server, onSelect, onSelectVoiceChannel, se
     if (!socket || !server) return;
 
     socket.emit('server:join', { serverId: server.id });
+    socket.emit('server:presence_hello', { serverId: server.id });
 
     const onCreated = (channel) => setChannels(prev => [...prev, channel]);
     const onDeleted = ({ channelId }) => {
