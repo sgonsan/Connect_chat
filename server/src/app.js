@@ -26,6 +26,10 @@ const { serversRouter: channelServersRouter, channelsRouter } = require('./modul
 app.use('/api/servers/:id/channels', channelServersRouter);
 app.use('/api/channels', channelsRouter);
 
+const { channelsRouter: messagesChannelsRouter, messagesRouter } = require('./modules/messages/messages.routes');
+app.use('/api/channels/:id/messages', messagesChannelsRouter);
+app.use('/api/messages', messagesRouter);
+
 app.use(errorHandler);
 
 module.exports = app;
