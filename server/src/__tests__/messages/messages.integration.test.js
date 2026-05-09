@@ -25,6 +25,14 @@ beforeAll(async () => {
     .set('Authorization', `Bearer ${tokenOwner}`)
     .send({ name: 'general' });
   channelId = resC.body.id;
+
+  const messagesRepo = require('../../modules/messages/messages.repository');
+  const ownerRow = await pool.query("SELECT id FROM users WHERE username='msgowner'");
+  await messagesRepo.createMessage({
+    channelId,
+    userId: ownerRow.rows[0].id,
+    content: 'setup message',
+  });
 });
 
 describe('GET /api/channels/:id/messages', () => {
@@ -34,6 +42,11 @@ describe('GET /api/channels/:id/messages', () => {
       .set('Authorization', `Bearer ${tokenOwner}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    const msg = res.body[0];
+    expect(msg).toHaveProperty('user');
+    expect(msg.user).not.toHaveProperty('password_hash');
+    expect(msg.user).toHaveProperty('username');
   });
 
   it('returns 403 for non-members', async () => {
