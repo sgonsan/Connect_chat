@@ -40,4 +40,19 @@ describe('PATCH /api/users/me', () => {
     expect(res.status).toBe(200);
     expect(res.body.username).toBe('tester_updated');
   });
+
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .patch('/api/users/me')
+      .send({ username: 'nope' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 when no fields provided', async () => {
+    const res = await request(app)
+      .patch('/api/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
 });

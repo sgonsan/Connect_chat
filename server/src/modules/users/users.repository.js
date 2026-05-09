@@ -9,9 +9,12 @@ async function findById(id) {
   return rows[0] || null;
 }
 
+const UPDATABLE_COLUMNS = new Set(['username', 'avatar_url']);
+
 async function updateUser(id, fields) {
-  const keys = Object.keys(fields);
-  const values = Object.values(fields);
+  const keys = Object.keys(fields).filter(k => UPDATABLE_COLUMNS.has(k));
+  if (keys.length === 0) throw new Error('No valid fields to update');
+  const values = keys.map(k => fields[k]);
   const set = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
   const { rows } = await pool.query(
     `UPDATE users SET ${set} WHERE id = $1
