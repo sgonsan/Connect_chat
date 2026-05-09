@@ -60,6 +60,7 @@ async function updateMemberRole(serverId, targetUserId, newRole) {
 }
 
 async function kickMember(serverId, targetUserId, requesterId) {
+  if (targetUserId === requesterId) throw createError(400, 'Cannot kick yourself');
   const target = await serversRepo.getMembership(targetUserId, serverId);
   if (!target) throw createError(404, 'Member not found');
   if (target.role === 'owner') throw createError(400, 'Cannot kick the server owner');
