@@ -4,4 +4,7 @@ const getMessagesSchema = z.object({
   before: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
-module.exports = { getMessagesSchema };
+const editMessageSchema = z.object({
+  content: z.string().min(1).max(2000),
+});
+module.exports = { getMessagesSchema, editMessageSchema };

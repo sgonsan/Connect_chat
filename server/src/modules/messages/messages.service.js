@@ -35,4 +35,11 @@ async function deleteMessage(messageId, userId) {
   return { messageId, channelId: message.channel_id };
 }
 
-module.exports = { getMessages, createMessage, deleteMessage };
+async function editMessage(messageId, userId, content) {
+  const message = await messagesRepo.findMessageById(messageId);
+  if (!message) throw createError(404, 'Message not found');
+  if (message.user_id !== userId) throw createError(403, "Cannot edit another user's message");
+  return messagesRepo.editMessage(messageId, content);
+}
+
+module.exports = { getMessages, createMessage, editMessage, deleteMessage };

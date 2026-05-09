@@ -44,6 +44,16 @@ async function findMessageById(id) {
   return rows[0] || null;
 }
 
+async function editMessage(id, content) {
+  const { rows } = await pool.query(
+    `UPDATE messages SET content = $1, edited_at = NOW()
+     WHERE id = $2
+     RETURNING id, channel_id, content, created_at, edited_at`,
+    [content, id]
+  );
+  return rows[0] || null;
+}
+
 async function deleteMessage(id) {
   await pool.query('DELETE FROM messages WHERE id = $1', [id]);
 }
@@ -56,4 +66,4 @@ async function getChannelServerId(channelId) {
   return rows[0]?.server_id || null;
 }
 
-module.exports = { createMessage, getMessages, findMessageById, deleteMessage, getChannelServerId };
+module.exports = { createMessage, getMessages, findMessageById, editMessage, deleteMessage, getChannelServerId };

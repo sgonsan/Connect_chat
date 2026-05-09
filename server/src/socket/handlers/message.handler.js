@@ -24,6 +24,22 @@ function registerMessageHandlers(io, socket) {
     }
   });
 
+  socket.on('message:edit', async ({ messageId, content }) => {
+    try {
+      if (!content?.trim()) return socket.emit('error', { code: 'VALIDATION', message: 'Content required' });
+      const message = await messagesService.editMessage(messageId, socket.user.userId, content.trim());
+      if (!message) return;
+      io.to(`channel:${message.channel_id}`).emit('message:edited', {
+        id:        message.id,
+        channelId: message.channel_id,
+        content:   message.content,
+        editedAt:  message.edited_at,
+      });
+    } catch (err) {
+      socket.emit('error', { code: err.status === 403 ? 'FORBIDDEN' : 'INTERNAL', message: err.message });
+    }
+  });
+
   socket.on('message:delete', async ({ messageId }) => {
     try {
       const { channelId } = await messagesService.deleteMessage(messageId, socket.user.userId);

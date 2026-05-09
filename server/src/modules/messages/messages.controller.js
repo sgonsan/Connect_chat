@@ -2,6 +2,7 @@
 const messagesService = require('./messages.service');
 const { getMessagesSchema } = require('./messages.schema');
 
+
 async function getMessages(req, res, next) {
   try {
     const query = getMessagesSchema.parse(req.query);
@@ -17,4 +18,11 @@ async function deleteMessage(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getMessages, deleteMessage };
+async function editMessage(req, res, next) {
+  try {
+    const message = await messagesService.editMessage(req.params.id, req.user.userId, req.body.content);
+    res.json(message);
+  } catch (err) { next(err); }
+}
+
+module.exports = { getMessages, editMessage, deleteMessage };
