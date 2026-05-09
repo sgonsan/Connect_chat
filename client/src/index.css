@@ -3,3 +3,54 @@
 @tailwind utilities;
 
 body { @apply bg-gray-800 text-gray-100 h-screen overflow-hidden; }
+
+/* Voice Room Styles */
+.lk-room-container {
+  @apply w-full h-full bg-gray-900;
+}
+
+.lk-grid-layout {
+  @apply gap-4 p-4 bg-gray-900;
+}
+
+/* Participant Tile */
+.lk-participant-tile {
+  @apply rounded-lg overflow-hidden shadow-lg;
+  aspect-ratio: 16 / 9;
+}
+
+.lk-participant-tile video {
+  @apply w-full h-full object-cover;
+}
+
+/* Responsive grid for voice participants */
+.voice-grid {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 640px) {
+  .voice-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .voice-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1536px) {
+  .voice-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Voice controls footer */
+.voice-controls-bar {
+  @apply bg-gray-800 border-t border-gray-700;
+  padding: 0.75rem 1.5rem;
+}
