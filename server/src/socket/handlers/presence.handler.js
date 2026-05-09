@@ -33,17 +33,14 @@ function registerPresenceHandlers(io, socket) {
   });
 
   // On disconnect, notify server rooms where this user was present
-  socket.on('disconnecting', () => {
+  socket.on('disconnecting', async () => {
     for (const room of socket.rooms) {
       if (room.startsWith('server:')) {
-        // Check if user has other active sockets in this room
-        io.in(room).fetchSockets().then(sockets => {
-          const others = sockets.filter(s => s.id !== socket.id && s.user?.userId === userId);
-          if (others.length === 0) {
-            // Last socket for this user in this room
-            socket.to(room).emit('presence:offline', { userId });
-          }
-        });
+        const sockets = await io.in(room).fetchSockets();
+        const others = sockets.filter(s => s.id !== socket.id && s.user?.userId === userId);
+        if (others.length === 0) {
+          socket.to(room).emit('presence:offline', { userId });
+        }
       }
     }
   });
