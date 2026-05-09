@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import MessageInput from './MessageInput';
+import EmojiPicker from './EmojiPicker';
 
 const mdComponents = {
   p:    ({ children }) => <p style={{ margin: 0 }}>{children}</p>,
@@ -38,6 +39,16 @@ function formatTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function groupReactions(reactions = []) {
+  const map = {};
+  for (const r of reactions) {
+    const key = r.emoji;
+    if (!map[key]) map[key] = { emoji: key, userIds: [] };
+    map[key].userIds.push(r.userId || r.user_id);
+  }
+  return Object.values(map);
+}
+
 export default function ChatArea({ channel }) {
   const { token } = useAuth();
   const socketRef = useSocket();
@@ -46,6 +57,7 @@ export default function ChatArea({ channel }) {
   const [editingId,   setEditingId]   = useState(null);
   const [editContent, setEditContent] = useState('');
   const [typingUsers, setTypingUsers] = useState({});
+  const [pickerMsgId, setPickerMsgId] = useState(null);
   const bottomRef  = useRef(null);
   const typingTimers = useRef({});
 
@@ -87,10 +99,14 @@ export default function ChatArea({ channel }) {
       });
     };
 
+    const onReacted = ({ messageId, reactions }) =>
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions } : m));
+
     socket.on('message:new',     onMsg);
     socket.on('message:deleted', onDeleted);
     socket.on('message:edited',  onEdited);
     socket.on('typing:update',   onTyping);
+    socket.on('message:reacted', onReacted);
 
     return () => {
       socket.emit('channel:leave', { channelId: channel.id });
@@ -98,6 +114,7 @@ export default function ChatArea({ channel }) {
       socket.off('message:deleted', onDeleted);
       socket.off('message:edited',  onEdited);
       socket.off('typing:update',   onTyping);
+      socket.off('message:reacted', onReacted);
       Object.values(typingTimers.current).forEach(clearTimeout);
     };
   }, [channel?.id]);
@@ -196,8 +213,43 @@ export default function ChatArea({ channel }) {
                       </div>
                     )}
 
+                    {/* Reactions display */}
+                    {groupReactions(msg.reactions).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                        {groupReactions(msg.reactions).map(r => (
+                          <button
+                            key={r.emoji}
+                            onClick={() => socketRef?.current?.emit('message:react', { messageId: msg.id, emoji: r.emoji })}
+                            style={{
+                              background: r.userIds.includes(myUserId) ? 'rgba(88,101,242,0.3)' : 'var(--bg-600)',
+                              border: `1px solid ${r.userIds.includes(myUserId) ? 'var(--accent)' : 'transparent'}`,
+                              borderRadius: 12, padding: '2px 8px', cursor: 'pointer', fontSize: 13,
+                              color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 4,
+                            }}
+                          >
+                            {r.emoji} <span style={{ fontSize: 12 }}>{r.userIds.length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Emoji picker */}
+                    {pickerMsgId === msg.id && (
+                      <div style={{ position: 'relative' }}>
+                        <EmojiPicker
+                          onPick={(emoji) => socketRef?.current?.emit('message:react', { messageId: msg.id, emoji })}
+                          onClose={() => setPickerMsgId(null)}
+                        />
+                      </div>
+                    )}
+
                     {hoverId === msg.id && editingId !== msg.id && (
                       <div style={{ position: 'absolute', right: 4, top: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button
+                          onClick={() => setPickerMsgId(pickerMsgId === msg.id ? null : msg.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '0 4px' }}
+                          title="React"
+                        >😊</button>
                         {msg.user?.id === myUserId && (
                           <button
                             onClick={() => startEdit(msg)}
