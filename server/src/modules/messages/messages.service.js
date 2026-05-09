@@ -22,7 +22,15 @@ async function createMessage({ channelId, userId, content }) {
 async function deleteMessage(messageId, userId) {
   const message = await messagesRepo.findMessageById(messageId);
   if (!message) throw createError(404, 'Message not found');
-  if (message.user_id !== userId) throw createError(403, "Cannot delete another user's message");
+
+  if (message.user_id !== userId) {
+    const serverId = await messagesRepo.getChannelServerId(message.channel_id);
+    const membership = await serversRepo.getMembership(userId, serverId);
+    if (!membership || !['owner', 'moderator'].includes(membership.role)) {
+      throw createError(403, "Cannot delete another user's message");
+    }
+  }
+
   await messagesRepo.deleteMessage(messageId);
   return { messageId, channelId: message.channel_id };
 }
