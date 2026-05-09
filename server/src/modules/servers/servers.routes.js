@@ -13,6 +13,7 @@ router.get('/',             ctrl.getMyServers);
 router.post('/',            validate(createServerSchema), ctrl.createServer);
 router.post('/join',        validate(joinServerSchema),   ctrl.joinServer);
 router.get('/:id',          ctrl.getServerDetail);
+router.get('/:id/unread',   ctrl.getUnreadCounts);
 router.delete('/:id',       ctrl.deleteServer);
 router.delete('/:id/leave', ctrl.leaveServer);
 

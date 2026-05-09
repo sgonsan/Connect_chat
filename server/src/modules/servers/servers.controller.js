@@ -1,5 +1,6 @@
 // server/src/modules/servers/servers.controller.js
 const serversService = require('./servers.service');
+const pool = require('../../db');
 
 async function createServer(req, res, next) {
   try {
@@ -65,4 +66,22 @@ async function kickMember(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { createServer, getMyServers, getServerDetail, deleteServer, joinServer, leaveServer, getMembers, updateMemberRole, kickMember };
+async function getUnreadCounts(req, res, next) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT ch.id AS channel_id, COUNT(m.id)::int AS count
+       FROM channels ch
+       LEFT JOIN channel_reads cr ON cr.channel_id = ch.id AND cr.user_id = $1
+       LEFT JOIN messages m ON m.channel_id = ch.id
+         AND (cr.last_read_at IS NULL OR m.created_at > cr.last_read_at)
+       WHERE ch.server_id = $2
+       GROUP BY ch.id`,
+      [req.user.userId, req.params.id]
+    );
+    const result = {};
+    for (const row of rows) result[row.channel_id] = row.count;
+    res.json(result);
+  } catch (err) { next(err); }
+}
+
+module.exports = { createServer, getMyServers, getServerDetail, deleteServer, joinServer, leaveServer, getMembers, updateMemberRole, kickMember, getUnreadCounts };

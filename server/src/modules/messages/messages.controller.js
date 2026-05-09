@@ -1,6 +1,7 @@
 // server/src/modules/messages/messages.controller.js
 const messagesService = require('./messages.service');
 const { getMessagesSchema } = require('./messages.schema');
+const pool = require('../../db');
 
 const VALID_EMOJIS = ['👍','❤️','😂','😮','😢','🔥','🎉','👀'];
 
@@ -36,4 +37,16 @@ async function toggleReaction(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getMessages, editMessage, deleteMessage, toggleReaction };
+async function markChannelRead(req, res, next) {
+  try {
+    await pool.query(
+      `INSERT INTO channel_reads (user_id, channel_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, channel_id) DO UPDATE SET last_read_at = NOW()`,
+      [req.user.userId, req.params.id]
+    );
+    res.status(204).send();
+  } catch (err) { next(err); }
+}
+
+module.exports = { getMessages, editMessage, deleteMessage, toggleReaction, markChannelRead };

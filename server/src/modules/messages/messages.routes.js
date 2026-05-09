@@ -8,6 +8,7 @@ const ctrl = require('./messages.controller');
 const channelsRouter = Router({ mergeParams: true });
 channelsRouter.use(authenticate);
 channelsRouter.get('/', ctrl.getMessages);
+channelsRouter.patch('/read', ctrl.markChannelRead);
 
 const messagesRouter = Router();
 messagesRouter.use(authenticate);
