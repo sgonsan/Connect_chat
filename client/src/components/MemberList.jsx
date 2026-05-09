@@ -3,10 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
-function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh, isOnline }) {
+function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh, isOnline, onOpenDM }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isMe     = member.id === myUserId;
+  const isMe      = member.id === myUserId;
   const canManage = myRole === 'owner' && !isMe && member.role !== 'owner';
+  const canClick  = canManage || !isMe;
 
   const changeRole = async (role) => {
     setMenuOpen(false);
@@ -29,10 +30,10 @@ function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh, isOnl
 
   return (
     <div
-      style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: canManage ? 'pointer' : 'default' }}
-      onMouseEnter={e => { if (canManage) e.currentTarget.style.background = 'var(--bg-600)'; }}
+      style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 4, cursor: canClick ? 'pointer' : 'default' }}
+      onMouseEnter={e => { if (canClick) e.currentTarget.style.background = 'var(--bg-600)'; }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; setMenuOpen(false); }}
-      onClick={() => { if (canManage) setMenuOpen(v => !v); }}
+      onClick={() => { if (canClick) setMenuOpen(v => !v); }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
@@ -56,13 +57,20 @@ function MemberRow({ member, myRole, myUserId, serverId, token, onRefresh, isOnl
       {menuOpen && (
         <div style={{ position: 'absolute', right: 0, top: '100%', background: 'var(--bg-900)', borderRadius: 6, padding: 4, zIndex: 10, minWidth: 180, boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}
           onClick={e => e.stopPropagation()}>
-          {member.role === 'member' && (
+          {!isMe && (
+            <button style={ctxItemStyle} onClick={() => { onOpenDM?.(member.id); setMenuOpen(false); }}>
+              ✉ Message
+            </button>
+          )}
+          {canManage && member.role === 'member' && (
             <button style={ctxItemStyle} onClick={() => changeRole('moderator')}>Promote to Moderator</button>
           )}
-          {member.role === 'moderator' && (
+          {canManage && member.role === 'moderator' && (
             <button style={ctxItemStyle} onClick={() => changeRole('member')}>Demote to Member</button>
           )}
-          <button style={{ ...ctxItemStyle, color: 'var(--danger)' }} onClick={kick}>Kick</button>
+          {canManage && (
+            <button style={{ ...ctxItemStyle, color: 'var(--danger)' }} onClick={kick}>Kick</button>
+          )}
         </div>
       )}
     </div>
@@ -75,7 +83,7 @@ const ctxItemStyle = {
   textAlign: 'left', cursor: 'pointer', borderRadius: 4,
 };
 
-export default function MemberList({ server }) {
+export default function MemberList({ server, onOpenDM }) {
   const { token } = useAuth();
   const socketRef = useSocket();
   const [members, setMembers] = useState([]);
@@ -137,7 +145,7 @@ export default function MemberList({ server }) {
           <div style={{ padding: '0 4px' }}>
             {byRole[key].map(m => (
               <MemberRow key={m.id} member={m} myRole={myRole} myUserId={myUserId}
-                serverId={server.id} token={token} onRefresh={fetchMembers} isOnline={onlineIds.has(m.id)} />
+                serverId={server.id} token={token} onRefresh={fetchMembers} isOnline={onlineIds.has(m.id)} onOpenDM={onOpenDM} />
             ))}
           </div>
         </div>

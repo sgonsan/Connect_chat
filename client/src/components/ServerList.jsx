@@ -56,7 +56,7 @@ function PillButton({ title, color, icon, onClick }) {
   );
 }
 
-export default function ServerList({ onSelect, selectedId }) {
+export default function ServerList({ onSelect, selectedId, dmMode, onToggleDM }) {
   const { token, user, logout } = useAuth();
   const [servers,    setServers]    = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -114,6 +114,14 @@ export default function ServerList({ onSelect, selectedId }) {
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       padding: '12px 0', gap: 8, overflowY: 'auto',
     }}>
+      <PillButton
+        title="Direct Messages"
+        color={dmMode ? 'var(--accent)' : 'var(--success)'}
+        icon="✉"
+        onClick={onToggleDM}
+      />
+      <div style={{ width: 32, height: 2, background: 'var(--bg-600)', borderRadius: 1, margin: '4px 0' }} />
+
       {servers.map(s => (
         <ServerIcon key={s.id} server={s} active={selectedId === s.id} onClick={() => onSelect(s)} />
       ))}
