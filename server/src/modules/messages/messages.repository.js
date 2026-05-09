@@ -3,9 +3,15 @@ const pool = require('../../db');
 
 async function createMessage({ channelId, userId, content }) {
   const { rows } = await pool.query(
-    `INSERT INTO messages (channel_id, user_id, content)
-     VALUES ($1, $2, $3)
-     RETURNING id, channel_id, user_id, content, created_at, edited_at`,
+    `WITH inserted AS (
+       INSERT INTO messages (channel_id, user_id, content)
+       VALUES ($1, $2, $3)
+       RETURNING *
+     )
+     SELECT i.id, i.channel_id, i.content, i.created_at, i.edited_at,
+            json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) AS user
+     FROM inserted i
+     JOIN users u ON u.id = i.user_id`,
     [channelId, userId, content]
   );
   return rows[0];
